@@ -29,22 +29,39 @@ class MicrodataParserTests: XCTestCase {
         }
     }
     
-//    func testCanParsePage() {
-//        let testCases = makeTests()
-//        for testCase in testCases {
-//            let expected = testCase.item
-//            let parsed = try! MicrodataParser.parse(html: testCase.page).first!
-//            XCTAssertEqual(JSON(parsed).string!, JSON(parsed).string!)
-//        }
-//    }
+    //    func testCanParsePage() {
+    //        let testCases = makeTests()
+    //        for testCase in testCases {
+    //            let expected = testCase.item
+    //            let parsed = try! MicrodataParser.parse(html: testCase.page).first!
+    //            XCTAssertEqual(JSON(parsed).string!, JSON(parsed).string!)
+    //        }
+    //    }
     
     func testCanParseRandomPage() {
         let str = try! String(contentsOf: URL(string: "http://eda.ru/recepty/vypechka-deserty/brauni-brownie-20955")!)
-        do {
-            dump(try MicrodataParser.parse(html: str))
-        } catch let e {
-            print(e.localizedDescription)
-        }
+        let parser = MicrodataParser()
+        dump(try! parser.parse(html: str))
+    }
+    
+    func testCanParseRandomPageWithOptions() {
+        let str = try! String(contentsOf: URL(string: "http://eda.ru/recepty/vypechka-deserty/brauni-brownie-20955")!)
+        let parser = MicrodataParser(propertyTransforms: [
+            "recipeIngredient" : { (element, _) in
+                guard
+                    let parent = element.at_xpath("../.."),
+                    let jsonString = parent["data-ingredient-object"]
+                    else {
+                        return nil
+                }
+                let json = JSON(parseJSON: jsonString)
+                return [
+                    "name" : json["name"].stringValue,
+                    "amount" : json["amount"].stringValue
+                ]
+            }
+            ])
+        dump(try! parser.parse(html: str))
     }
     
     static var allTests : [(String, (MicrodataParserTests) -> () throws -> Void)] {
