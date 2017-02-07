@@ -44,9 +44,18 @@ class MicrodataParserTests: XCTestCase {
         dump(try! parser.parse(html: str))
     }
     
+    func testCanFilterSchemas() {
+        let str = try! String(contentsOf: URL(string: "http://www.edimdoma.ru/retsepty/94612-buzhenina-v-kalitke")!)
+        let parser = MicrodataParser(acceptedSchemas: ["https://schema.org/Recipe"])
+        let result = try! parser.parse(html: str)
+        XCTAssertEqual(result.count, 1)
+    }
+    
     func testCanParseRandomPageWithOptions() {
         let str = try! String(contentsOf: URL(string: "http://eda.ru/recepty/vypechka-deserty/brauni-brownie-20955")!)
-        let parser = MicrodataParser(propertyTransforms: [
+        let parser = MicrodataParser(
+            acceptedSchemas: nil,
+            propertyTransforms: [
             "recipeIngredient" : { (element, _) in
                 guard
                     let parent = element.at_xpath("../.."),
@@ -64,9 +73,13 @@ class MicrodataParserTests: XCTestCase {
         dump(try! parser.parse(html: str))
     }
     
+    
+    
     static var allTests : [(String, (MicrodataParserTests) -> () throws -> Void)] {
         return [
-            ("testCanExtendDictionary", testCanExtendDictionary)
+            ("testCanExtendDictionary", testCanExtendDictionary),
+            ("testCanParseRandomPage", testCanParseRandomPage),
+            ("testCanParseRandomPageWithOptions", testCanParseRandomPageWithOptions)
         ]
     }
 }

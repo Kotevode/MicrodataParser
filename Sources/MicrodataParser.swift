@@ -84,15 +84,16 @@ public typealias PropertyTransform = (Kanna.XMLElement, Any) throws -> Any?
 
 public final class MicrodataParser {
     
-    var propertyTransforms : [String : PropertyTransform] = [:]
+    var propertyTransforms : [String : PropertyTransform]
+    var acceptedSchemas : [String]!
     
-    init(){}
-    
-    init(propertyTransforms: [String : PropertyTransform]) {
+    public init(acceptedSchemas: [String]? = nil,
+                propertyTransforms: [String : PropertyTransform] = [:]) {
         self.propertyTransforms = propertyTransforms
+        self.acceptedSchemas = acceptedSchemas
     }
     
-    func parse(html: String) throws -> [[String : Any]] {
+    public func parse(html: String) throws -> [[String : Any]] {
         guard
             let document = Kanna.HTML(html: html, encoding: .utf8),
             let body = document.body
@@ -104,8 +105,19 @@ public final class MicrodataParser {
             .map{ $0.objectValue }
     }
     
-    private func parseItems(from element: Kanna.XMLElement) throws -> [MicrodataItem] {
-        if element.isItem {
+    func isAccepted(element: Kanna.XMLElement) -> Bool {
+        if acceptedSchemas != nil {
+            guard let type = element.type else {
+                return false
+            }
+            return acceptedSchemas.contains(type)
+        } else {
+            return true
+        }
+    }
+    
+    func parseItems(from element: Kanna.XMLElement) throws -> [MicrodataItem] {
+        if element.isItem && isAccepted(element: element) {
             return [try parseItem(from: element)]
         } else {
             var items = [MicrodataItem]()
@@ -116,7 +128,7 @@ public final class MicrodataParser {
         }
     }
 
-    private func parseItem(from element: Kanna.XMLElement) throws -> MicrodataItem {
+    func parseItem(from element: Kanna.XMLElement) throws -> MicrodataItem {
         let item = MicrodataItem()
         if let id = element.id {
             item["@id"] = id
@@ -136,7 +148,7 @@ public final class MicrodataParser {
         return item
     }
 
-    private func parseProperties(from element: Kanna.XMLElement) throws -> [(name: String, value: Any)] {
+    func parseProperties(from element: Kanna.XMLElement) throws -> [(name: String, value: Any)] {
         if element.isProperty {
             let propertyName = element[Attribute.itemProperty.rawValue]!
             var value : Any
@@ -160,7 +172,7 @@ public final class MicrodataParser {
         }
     }
 
-    private func parseValue(from element: Kanna.XMLElement) throws -> Any {
+    func parseValue(from element: Kanna.XMLElement) throws -> Any {
         if let tag = PropertyTag(rawValue: element.tagName!.lowercased()) {
             return element[tag.valueAttribute] ?? ""
         } else {
@@ -168,7 +180,7 @@ public final class MicrodataParser {
         }
     }
     
-    private func connectReferencedProperties(item: MicrodataItem,
+    func connectReferencedProperties(item: MicrodataItem,
                                                     from element: Kanna.XMLElement) throws -> MicrodataItem {
         for reference in item.references {
             guard let referenced = element.at_xpath(".//*[@id='\(reference)']") else {
