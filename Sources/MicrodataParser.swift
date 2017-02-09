@@ -85,10 +85,15 @@ public typealias PropertyTransform = (Kanna.XMLElement, Any) throws -> Any?
 public final class MicrodataParser {
     
     var propertyTransforms : [String : PropertyTransform] = [:]
+    var acceptedSchemas : [String]?
     
     public init(){}
     
-    public init(propertyTransforms: [String : PropertyTransform]) {
+    public init(
+        acceptedSchemas: [String]? = nil,
+        propertyTransforms: [String : PropertyTransform]
+        ) {
+        self.acceptedSchemas = acceptedSchemas
         self.propertyTransforms = propertyTransforms
     }
     
@@ -104,8 +109,19 @@ public final class MicrodataParser {
             .map{ $0.objectValue }
     }
     
+    func accept(element: Kanna.XMLElement) -> Bool {
+        if acceptedSchemas != nil {
+            guard let type = element.type else {
+                return false
+            }
+            return acceptedSchemas!.contains(type)
+        } else {
+            return true
+        }
+    }
+    
     func parseItems(from element: Kanna.XMLElement) throws -> [MicrodataItem] {
-        if element.isItem {
+        if element.isItem && accept(element: element) {
             return [try parseItem(from: element)]
         } else {
             var items = [MicrodataItem]()
